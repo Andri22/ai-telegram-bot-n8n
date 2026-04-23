@@ -1,0 +1,163 @@
+{
+  "name": "AI Telegram Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "11662fc1-dcb5-4e31-9ade-1cf05ed5940f",
+      "name": "Telegram Trigger",
+      "webhookId": "8d3b12fe-6092-4451-9119-84121f03b49a",
+      "credentials": {
+        "telegramApi": {
+          "id": "c7EzPV5A1FV4xYgo",
+          "name": "MyAI Assistant"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"max_tokens\": 500,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a helpful AI assistant for a small business. Answer clearly and concisely. Respond in the same language the user writes in.\"\n    },\n    {{ $json.messages.map(m => JSON.stringify(m)).join(',') }}\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        416,
+        0
+      ],
+      "id": "0deb54f9-288a-4172-9b10-b56c55fe10ba",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "Egen9mTM4j4kORev",
+          "name": "Bearer Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "={{ $json.reply }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        832,
+        0
+      ],
+      "id": "89428f45-e58b-4c8a-bfd0-a5c400df4201",
+      "name": "Send a text message",
+      "webhookId": "c1d282eb-78a3-4d3f-a08e-3e1568a913d0",
+      "credentials": {
+        "telegramApi": {
+          "id": "c7EzPV5A1FV4xYgo",
+          "name": "MyAI Assistant"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst chatId = $('Build History').item.json.chatId;\nconst reply = $input.first().json.choices[0].message.content;\n\nstaticData.chatHistory[chatId].push({ role: 'assistant', content: reply });\n\nreturn [{ json: { chatId, reply } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "ed521821-65e5-45c4-ba86-a7c25428986b",
+      "name": "Save Reply"
+    },
+    {
+      "parameters": {
+        "jsCode": "const message = $input.first().json.message;\nconst chatId = message.chat.id.toString();\nconst userText = message.text;\n\nconst staticData = $getWorkflowStaticData('global');\nif (!staticData.chatHistory) staticData.chatHistory = {};\nif (!staticData.chatHistory[chatId]) staticData.chatHistory[chatId] = [];\n\nstaticData.chatHistory[chatId].push({ role: 'user', content: userText });\n\nif (staticData.chatHistory[chatId].length > 10) {\n  staticData.chatHistory[chatId].shift();\n}\n\nreturn [{ json: { chatId, messages: staticData.chatHistory[chatId] } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "e14c29a6-21f0-439b-a8bb-9d17c244d3c2",
+      "name": "Build History"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Build History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Save Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Reply": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build History": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "0bf72893-462b-4b0e-aa2c-c3addb474a7b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ab4da710a8e5e399600a494b56823a58c73a4cfb4b7d4aa1a9b2cd8cfec75e18"
+  },
+  "id": "KDTxgfKlpxVNfUnd",
+  "tags": []
+}
