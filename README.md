@@ -45,3 +45,6 @@ extra staff.
 - Instant replies under 3 seconds
 - Context-aware conversation memory
 - Zero manual response needed
+
+## Additional Features
+- Automatic error monitoring with Telegram alerts
